@@ -1,10 +1,13 @@
 import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 const DEFAULT_BASE_URL = 'https://demo.spikerz.com';
 const DEFAULT_DEV_USERNAME = 'me';
 const DEFAULT_DEV_PASSWORD = 'SmipMe123456';
-const DEFAULT_BROWSER: BrowserName = 'chrome';
+const DEFAULT_BROWSER: BrowserName = 'electron';
+const CYPRESS_SPEC = 'cypress/e2e/youtube-connect.cy.ts';
+const CYPRESS_RUN_LOG = 'cypress-run.log';
 const MAX_CAPTURED_OUTPUT_LENGTH = 40_000;
 
 export const allowedBrowsers = ['chrome', 'chromium', 'electron', 'edge', 'firefox'] as const;
@@ -51,7 +54,7 @@ export function runAutomation(options: AutomationOptions = {}): Promise<Automati
     'cypress',
     'run',
     '--spec',
-    'cypress/e2e/youtube-connect.cy.ts',
+    CYPRESS_SPEC,
     '--browser',
     browser,
   ];
@@ -60,6 +63,7 @@ export function runAutomation(options: AutomationOptions = {}): Promise<Automati
     args.push('--headed');
   }
 
+  const logStream = createWriteStream(CYPRESS_RUN_LOG, { flags: 'w' });
   const child = spawn('npx', args, {
     cwd: process.cwd(),
     env: {
@@ -72,18 +76,34 @@ export function runAutomation(options: AutomationOptions = {}): Promise<Automati
   let stdout = '';
   let stderr = '';
 
+  const teeOutput = (chunk: string, stream: 'stdout' | 'stderr'): void => {
+    logStream.write(chunk);
+    process.stdout.write(chunk);
+    if (stream === 'stdout') {
+      stdout = appendBounded(stdout, chunk);
+    } else {
+      stderr = appendBounded(stderr, chunk);
+    }
+  };
+
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
   child.stdout.on('data', (chunk: string) => {
-    stdout = appendBounded(stdout, chunk);
+    teeOutput(chunk, 'stdout');
   });
   child.stderr.on('data', (chunk: string) => {
-    stderr = appendBounded(stderr, chunk);
+    teeOutput(chunk, 'stderr');
   });
 
+  const shellCommand = `npx ${args.join(' ')} 2>&1 | tee ${CYPRESS_RUN_LOG}`;
+
   return new Promise<AutomationRunResult>((resolve, reject) => {
-    child.once('error', reject);
+    child.once('error', (error) => {
+      logStream.end();
+      reject(error);
+    });
     child.once('close', (exitCode, signal) => {
+      logStream.end();
       const finishedAt = new Date().toISOString();
       const durationMs = Math.round(performance.now() - started);
 
@@ -94,7 +114,7 @@ export function runAutomation(options: AutomationOptions = {}): Promise<Automati
         startedAt,
         finishedAt,
         durationMs,
-        command: `npx ${args.join(' ')}`,
+        command: shellCommand,
         stdout,
         stderr,
       });

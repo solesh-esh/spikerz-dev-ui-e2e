@@ -1,0 +1,2 @@
+export const YOUTUBE_OAUTH_CALLBACK_URL =
+  'https://demo.spikerz.com/social-connect/youtube?state=eyJ3b3Jrc3BhY2VJZCI6IjEiLCJpc0VtcGxveWVlUHJvdGVjdGlvbiI6ZmFsc2UsInBsYXRmb3JtIjoieW91dHViZSJ9&iss=https:%2F%2Faccounts.google.com&code=4%2F0AeoWuM99SOi6ncSg2LGOHZ93VteJr_AQne3Qj8K1BiQw7Bdrg3LnqIoVdXyjCLdPFLTdoQ&scope=https:%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.readonly&workspaceId=1&id=17841445325350983&username=ellesse&platform=instagram';

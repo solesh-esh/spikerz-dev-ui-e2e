@@ -10,7 +10,7 @@ describe('Spikerz YouTube social connection', () => {
     devUiPage.visit('/');
     devUiPage.assertOnDemoSite();
 
-    //devUiPage.visit('/social-connect/');
+    devUiPage.visit('/social-connect/');
     socialConnectPage.selectYoutube();
     socialConnectPage.clickYoutubeConnect();
     socialConnectPage.waitForYoutubeCallback();
